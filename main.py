@@ -410,6 +410,36 @@ class Plugin:
         self._load()
         return self.hosts
 
+    async def get_preferences(self):
+        try:
+            value = json.loads(self.store.with_name('preferences.json').read_text(encoding='utf-8'))
+            language = value.get('language') if isinstance(value, dict) else None
+        except (OSError, ValueError):
+            language = None
+        return {'language': language if language in ('ru', 'en') else 'ru'}
+
+    async def set_language(self, language: str):
+        if language not in ('ru', 'en'):
+            return {'success': False, 'error': 'Выберите русский или английский язык'}
+        target = self.store.with_name('preferences.json')
+        temporary = None
+        try:
+            target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+            with tempfile.NamedTemporaryFile(mode='w', dir=target.parent,
+                    prefix='.preferences-', encoding='utf-8', delete=False) as out:
+                temporary = out.name
+                os.fchmod(out.fileno(), 0o600)
+                json.dump({'language': language}, out)
+                out.flush()
+                os.fsync(out.fileno())
+            os.replace(temporary, target)
+            return {'success': True, 'language': language}
+        except OSError:
+            return {'success': False, 'error': 'Не удалось сохранить язык. Проверьте доступ к настройкам DeckPilot.'}
+        finally:
+            if temporary and os.path.exists(temporary):
+                os.unlink(temporary)
+
     async def import_legacy(self):
         self._load()
         if self.hosts:

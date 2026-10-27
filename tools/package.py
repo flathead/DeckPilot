@@ -7,7 +7,7 @@ import shutil
 import zipfile
 from build import ROOT, build
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 
 def archive(path, files):
@@ -31,7 +31,8 @@ def main():
     (ROOT/'tools/Setup-Linux.desktop').chmod(0o755)
     cmd = ROOT/'tools/Setup-Windows.cmd'
     cmd.write_bytes(cmd.read_text().replace('\r\n', '\n').replace('\n','\r\n').encode('ascii'))
-    runtime = ['plugin.json','package.json','main.py','dist/index.js','LICENSE','README.md','CHANGELOG.md',
+    runtime = ['plugin.json','package.json','main.py','dist/index.js','LICENSE','README.md','README.en.md','CHANGELOG.md',
+               'locales/ru.json','locales/en.json',
                'tools/setup-linux.sh','tools/setup-arch.sh','tools/Setup-Linux.desktop',
                'tools/setup-windows.ps1','tools/Setup-Windows.cmd']
     screenshots = list((ROOT/'assets/screenshots').glob('*.png'))
@@ -41,8 +42,10 @@ def main():
     host = out/f'deckpilot-host-{VERSION}.zip'
     names = ['setup-linux.sh','Setup-Linux.desktop','setup-windows.ps1','Setup-Windows.cmd']
     files = [(ROOT/'tools'/name, 'DeckPilot Host/'+name) for name in names]
-    files += [(ROOT/'tools/HOST-README.md','DeckPilot Host/README.md'),
-              (ROOT/'README.md','DeckPilot Host/MANUAL.md'),(ROOT/'LICENSE','DeckPilot Host/LICENSE')]
+    files += [(ROOT/'tools/HOST-README.md','DeckPilot Host/HOST-README.md'),
+              (ROOT/'tools/HOST-README.en.md','DeckPilot Host/HOST-README.en.md'),
+              (ROOT/'README.md','DeckPilot Host/README.md'),
+              (ROOT/'README.en.md','DeckPilot Host/README.en.md'),(ROOT/'LICENSE','DeckPilot Host/LICENSE')]
     files += [(path, 'DeckPilot Host/'+str(path.relative_to(ROOT))) for path in screenshots]
     archive(host,files)
     source = out/f'deckpilot-source-{VERSION}.zip'

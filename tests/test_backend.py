@@ -69,6 +69,32 @@ class BackendTests(unittest.TestCase):
         self.assertFalse(result['host']['show_headless'])
         self.assertEqual(self.plugin.store.stat().st_mode & 0o777, 0o600)
 
+    def test_language_defaults_to_russian_and_persists(self):
+        with patch.dict(os.environ, {'LANG':'en_US.UTF-8', 'LANGUAGE':'en'}):
+            self.assertEqual(self.call('get_preferences'), {'language':'ru'})
+        self.assertTrue(self.call('set_language','en')['success'])
+        restarted=backend.Plugin()
+        restarted.store=self.plugin.store
+        self.assertEqual(asyncio.run(restarted.get_preferences()), {'language':'en'})
+        self.assertEqual(self.plugin.store.with_name('preferences.json').stat().st_mode & 0o777,0o600)
+        self.assertEqual(len(self.call('get_hosts')),1)
+        self.assertTrue(self.call('set_language','ru')['success'])
+        self.assertEqual(self.call('get_preferences'), {'language':'ru'})
+
+    def test_invalid_or_corrupt_preferences_fall_back_to_russian(self):
+        self.assertFalse(self.call('set_language','de')['success'])
+        self.assertFalse(self.plugin.store.with_name('preferences.json').exists())
+        for value in ('{"language":"de"}', '[]', 'null', '{broken'):
+            self.plugin.store.with_name('preferences.json').write_text(value)
+            self.assertEqual(self.call('get_preferences'), {'language':'ru'})
+
+    def test_language_save_failure_preserves_previous_value(self):
+        self.call('set_language','en')
+        with patch.object(backend.os,'replace',side_effect=OSError('disk full')):
+            self.assertFalse(self.call('set_language','ru')['success'])
+        self.assertEqual(self.call('get_preferences'), {'language':'en'})
+        self.assertEqual(list(self.plugin.store.parent.glob('.preferences-*')),[])
+
     def test_enable_later_requires_verified_capability(self):
         with patch.object(backend,'_ssh_request',return_value='decky-power:ok'), patch.object(backend,'_capabilities',return_value={'headless':'','platform':'linux','steam_pair':False}):
             self.assertFalse(self.call('set_headless_visibility','pc1',True)['success'])

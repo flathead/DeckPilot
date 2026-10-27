@@ -1,10 +1,17 @@
 import assert from 'node:assert/strict';
 let slots=[], cursor=0, pending=[], cleanups=[], dirty=false, tree;
 let hostList=[], capabilities=false;
+let savedLanguage='ru', failLanguageSave=false;
+let lastToast, lastModal;
 const calls=[];
 const host={id:'pc1',name:'Game PC',ip:'192.168.1.10',mac:'00:11:22:33:44:55',ssh_port:22,platform:'linux',headless:'',show_headless:false,steam_pair:false};
-const api={toaster:{toast(){}},async call(name,...args){
+const api={toaster:{toast(value){lastToast=value;}},async call(name,...args){
   calls.push([name,...args]);
+  if(name==='get_preferences')return {language:savedLanguage};
+  if(name==='set_language'){
+    if(failLanguageSave)return {success:false,error:'Не удалось сохранить язык. Проверьте доступ к настройкам DeckPilot.'};
+    savedLanguage=args[0];return {success:true,language:savedLanguage};
+  }
   if(name==='get_hosts')return hostList.map(x=>({...x}));
   if(name==='discover_pairing_hosts')return {success:true,hosts:[{ip:host.ip,name:host.name}]};
   if(name==='pairing_info')return {success:true,host:{...host,fingerprint:'SHA256:abc',verification:'ABCD-1234-EF56'}};
@@ -13,6 +20,7 @@ const api={toaster:{toast(){}},async call(name,...args){
     return {success:true,host:hostList[0]};
   }
   if(name==='host_status')return {success:true,ssh_available:true};
+  if(name==='shutdown_host')return {success:true,message:'Команда выключения принята'};
   if(name==='delete_host'){hostList=[];return {success:true};}
   if(name==='headless_action')return {success:true,data:args[1]==='start'?{state:'ready',running:true}:{state:'stopped',running:false}};
   if(name==='set_headless_visibility'){
@@ -32,12 +40,12 @@ const R={
 };
 globalThis.SP_REACT=R;
 globalThis.DFL=Object.fromEntries(['PanelSection','PanelSectionRow','ButtonItem','DropdownItem','TextField','ConfirmModal'].map(x=>[x,x]));
-globalThis.DFL.showModal=modal=>modal.props.onOK();
+globalThis.DFL.showModal=modal=>{lastModal=modal;modal.props.onOK();};
 globalThis.__DECKY_SECRET_INTERNALS_DO_NOT_USE_OR_YOU_WILL_BE_FIRED_deckyLoaderAPIInit={connect:(v,name)=>{assert.equal(name,'DeckPilot');return api;}};
 // Poll timers are controlled; the harness renders on demand.
 const originalSetTimeout=globalThis.setTimeout;
 globalThis.setTimeout=()=>0;
-const {default:plugin}=await import('../dist/index.js');
+const {default:plugin,translate,translateError}=await import('../dist/index.js');
 const Content=plugin().content.type;
 function render(){cursor=0;dirty=false;tree=Content();const effects=pending;pending=[];for(const effect of effects)effect();}
 async function flush(){for(let i=0;i<16;i++){await Promise.resolve();if(dirty)render();}}
@@ -75,9 +83,47 @@ await click('Настройки ПК');await click('Удалить ПК');
 assert.match(strings(tree),/шаг 1 из 4/,'Deleting the last PC must restart onboarding');
 // Windows onboarding offers PC power only, with the correct launcher.
 hostList=[];await mount();
-const dropdown=nodes().find(n=>n.type==='DropdownItem');dropdown.props.onChange({data:'windows'});await flush();
+const dropdown=nodes().find(n=>n.type==='DropdownItem'&&n.props.label==='Система на компьютере');dropdown.props.onChange({data:'windows'});await flush();
 await click('Продолжить');
 assert.ok(!nodes().some(n=>n.type==='ButtonItem'&&strings(n)==='Да · подключить управление'));
 await click('Нет · только питание ПК');assert.match(strings(tree),/Setup-Windows.cmd/);
+async function chooseLanguage(language){
+  const selector=nodes().find(n=>n.type==='DropdownItem'&&n.props.label==='Язык / Language');
+  assert.ok(selector);selector.props.onChange({data:language});await flush();
+}
+await chooseLanguage('en');
+assert.match(strings(tree),/Setup-Windows.cmd/);assert.ok(button('Back'));
+await mount();
+assert.match(strings(tree),/Connect a PC · step 1 of 4/);
+await click('Continue');assert.match(strings(tree),/separate Steam session/);
+await click('No · PC power controls only');
+await click('PC wizard is open · find PC');
+assert.match(strings(tree),/ABCD-1234-EF56/);
+assert.ok(button('Connect').props.disabled);
+await field('PIN from PC setup · 8 digits','12345678');
+await click('Connect');assert.ok(button('Shut down PC'));
+await click('Shut down PC');
+assert.equal(lastModal.props.strTitle,'Shut down this computer?');
+assert.match(lastModal.props.strDescription,/Game PC/);
+assert.equal(lastModal.props.strCancelButtonText,'Cancel');
+assert.equal(lastToast.body,'Shutdown command accepted');
+await click('PC settings');await click('Add Steam Headless…');
+capabilities=false;
+await click('Headless is installed · check and add');
+assert.match(strings(tree),/Set up Steam Headless on the PC first/);
+failLanguageSave=true;
+await chooseLanguage('ru');
+assert.ok(button('Back'));assert.match(strings(tree),/Could not save the language/);
+failLanguageSave=false;
+await chooseLanguage('ru');assert.ok(button('Назад'));
+await mount();assert.ok(button('Настройки ПК'));
+// Unknown saved values fall back to Russian, without consulting system language.
+savedLanguage='de';hostList=[];await mount();assert.ok(button('Продолжить'));
+assert.equal(translate('en','Подключение ПК · шаг {step} из 4',{step:2}),'Connect a PC · step 2 of 4');
+assert.equal(translateError('en','ПК не найден'),'PC not found');
+assert.match(translateError('en','Не удалось подтвердить выключение (код SSH: 255)'),/255/);
+assert.equal(translateError('ru','PC not found'),'ПК не найден');
+assert.match(translateError('en','Произвольная ошибка внешнего контроллера'),/Could not complete/);
+assert.match(translateError('ru','External controller failed'),/Не удалось выполнить/);
 for(const cleanup of cleanups)cleanup?.();globalThis.setTimeout=originalSetTimeout;
-console.log('Frontend: first setup, hidden controls, later opt-in, failed enable, Windows flow: passed');
+console.log('Frontend: setup, Headless, Windows, language persistence/fallback, translated errors and confirmations: passed');

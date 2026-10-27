@@ -46,7 +46,7 @@ function Get-NetIPAddress {{}}
         while True:
             line=process.stdout.readline()
             if not line:raise RuntimeError('Windows harness failed before starting')
-            match=re.search(r'PIN IN DECKPILOT: (\d{8})',line)
+            match=re.search(r'PIN В DECKPILOT: (\d{8})',line)
             if match:code=match.group(1);break
         def request(method,path,payload=None):
             conn=http.client.HTTPConnection('127.0.0.1',port,timeout=5)

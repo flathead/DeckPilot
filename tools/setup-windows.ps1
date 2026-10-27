@@ -1,8 +1,8 @@
 ﻿#requires -Version 5.1
-# DeckPilot 0.2.0: Windows 10/11, built-in OpenSSH, no Python dependency.
+# DeckPilot 0.3.0: Windows 10/11, built-in OpenSSH, no Python dependency.
 $ErrorActionPreference = 'Stop'
 if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    throw 'Launch Setup-Windows.cmd and approve the administrator prompt.'
+    throw 'Запустите Setup-Windows.cmd и подтвердите запрос администратора.'
 }
 $Base = Join-Path $env:ProgramData 'DeckPilot'
 $SshDir = Join-Path $env:ProgramData 'ssh'
@@ -13,19 +13,19 @@ $Listener = $null
 $Utf8 = New-Object System.Text.UTF8Encoding($false)
 function Write-Utf8($Path, $Value) { [IO.File]::WriteAllText($Path, $Value, $Utf8) }
 function Native-Check($Description) { if ($LASTEXITCODE -ne 0) { throw $Description } }
-Write-Host 'DeckPilot 0.2.0: подключение Windows-ПК'
+Write-Host 'DeckPilot 0.3.0: подключение Windows-ПК'
 Write-Host 'Мастер установит OpenSSH и создаст учётную запись для проверки связи и выключения ПК.'
 Write-Host 'Со Steam Headless вы играете на Deck через отдельную сессию Steam в Linux-контейнере.'
 Write-Host 'Помощник Windows управляет питанием ПК. Для интеграции Headless и Ambxst нужен Linux-ПК.'
 if ((Read-Host 'Продолжить установку? [Y/n]') -match '^[nNнН]') { exit }
 $Existing = Get-LocalUser -Name $Account -ErrorAction SilentlyContinue
 if ($Existing -and $Existing.Description -ne 'DeckPilot restricted SSH account') {
-    throw 'An unrelated deckpower account already exists. No account changes were made.'
+    throw 'Учётная запись deckpower уже существует и не относится к DeckPilot. Мастер не менял её.'
 }
 $Capability = Get-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0'
 if ($Capability.State -ne 'Installed') {
     $Installed = Add-WindowsCapability -Online -Name 'OpenSSH.Server~~~~0.0.1.0'
-    if ($Installed.RestartNeeded) { throw 'Windows requests a restart. Restart and run this setup again.' }
+    if ($Installed.RestartNeeded) { throw 'Windows запросила перезагрузку. Перезагрузите ПК и повторите настройку.' }
     Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP' -ErrorAction SilentlyContinue |
         Set-NetFirewallRule -RemoteAddress LocalSubnet -Profile Private
 }
@@ -33,12 +33,12 @@ if (-not (Test-Path (Join-Path $SshBin 'ssh-keygen.exe'))) {
     Add-WindowsCapability -Online -Name 'OpenSSH.Client~~~~0.0.1.0' | Out-Null
 }
 if ((Test-Path $Base) -and ((Get-Item -Force $Base).Attributes -band [IO.FileAttributes]::ReparsePoint)) {
-    throw 'The installation directory must not be a link or junction.'
+    throw 'Каталог установки не должен быть символической ссылкой или junction.'
 }
 New-Item -ItemType Directory -Path $Base -Force | Out-Null
 # Root-owned installation; only this fixed account can read the dispatcher and keys.
 & icacls.exe $Base /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
-Native-Check 'Cannot secure installation directory'
+Native-Check 'Не удалось настроить права каталога установки'
 if (-not $Existing) {
     $Bytes = New-Object byte[] 48
     $Rng = [Security.Cryptography.RandomNumberGenerator]::Create()
@@ -49,7 +49,7 @@ if (-not $Existing) {
 }
 $Sid = (Get-LocalUser -Name $Account).SID.Value
 & icacls.exe $Base /grant:r "*${Sid}:(OI)(CI)RX" | Out-Null
-Native-Check 'Cannot grant read access to the restricted account'
+Native-Check 'Не удалось выдать учётной записи доступ для чтения'
 # Grant only local shutdown; forbid interactive desktop/RDP logons. No admin membership.
 Add-Type @'
 using System;
@@ -121,12 +121,12 @@ Match all
 $Updated = $Clean.Insert($Position,"`r`n"+$Block+"`r`n")
 Write-Utf8 $ConfigPath $Updated
 & (Join-Path $SshBin 'sshd.exe') -t
-if ($LASTEXITCODE -ne 0) { Write-Utf8 $ConfigPath $Original; throw 'SSH config rejected; original restored.' }
+if ($LASTEXITCODE -ne 0) { Write-Utf8 $ConfigPath $Original; throw 'SSH отклонил конфигурацию. Мастер восстановил прежний файл.' }
 $Effective = & (Join-Path $SshBin 'sshd.exe') -T -C 'user=deckpower,host=localhost,addr=127.0.0.1'
-Native-Check 'Cannot verify effective SSH config'
+Native-Check 'Не удалось проверить действующие настройки SSH'
 if (($Effective -notcontains 'passwordauthentication no') -or ($Effective -notcontains 'authenticationmethods publickey') -or -not ($Effective -match '^forcecommand powershell.exe')) {
     Write-Utf8 $ConfigPath $Original
-    throw 'SSH restrictions conflict with this PC configuration. Original config restored.'
+    throw 'Правила SSH конфликтуют с настройками ПК. Мастер восстановил прежний файл.'
 }
 Restart-Service sshd
 $PortLine = $Effective | Where-Object { $_ -match '^port ' } | Select-Object -First 1
@@ -142,7 +142,7 @@ if ($Adapters.Count -gt 0) {
     $Choice = Read-Host 'Номер адаптера [1], 0: пропустить'
     if (-not $Choice) { $Choice='1' }
     $Number=0
-    if (-not [int]::TryParse($Choice,[ref]$Number) -or $Number -lt 0 -or $Number -gt $Adapters.Count) { throw 'Invalid adapter number' }
+    if (-not [int]::TryParse($Choice,[ref]$Number) -or $Number -lt 0 -or $Number -gt $Adapters.Count) { throw 'Неверный номер сетевого адаптера' }
     if ($Number -gt 0) {
         $Adapter=$Adapters[$Number-1]; $Mac=$Adapter.MacAddress.Replace('-',':').ToLowerInvariant()
         try { Set-NetAdapterPowerManagement -Name $Adapter.Name -WakeOnMagicPacket Enabled -ErrorAction Stop | Out-Null }
@@ -155,9 +155,9 @@ function Fingerprint($Key) {
     try {
         Write-Utf8 $Temp ($Key+"`n")
         $Output = & (Join-Path $SshBin 'ssh-keygen.exe') -lf $Temp
-        Native-Check 'Invalid SSH public key'
+        Native-Check 'Некорректный публичный ключ SSH'
         $Fp = ($Output -split '\s+')[1]
-        if ($Fp -notmatch '^SHA256:[A-Za-z0-9+/]{20,90}$') { throw 'Invalid SSH fingerprint' }
+        if ($Fp -notmatch '^SHA256:[A-Za-z0-9+/]{20,90}$') { throw 'Некорректный отпечаток SSH' }
         return $Fp
     } finally { Remove-Item $Temp -Force -ErrorAction SilentlyContinue }
 }
@@ -190,7 +190,7 @@ try {
     New-NetFirewallRule -Name $PairRule -DisplayName 'DeckPilot pairing (temporary)' -Direction Inbound -Action Allow -Protocol TCP -LocalPort 47833 -RemoteAddress LocalSubnet -Profile Private | Out-Null
     $Listener=New-Object Net.Sockets.TcpListener([Net.IPAddress]::Any,47833)
     $Listener.Start()
-    Write-Host "`nPIN IN DECKPILOT: $Code"
+    Write-Host "`nPIN В DECKPILOT: $Code"
     Write-Host 'На Deck откройте Decky > DeckPilot > Подключить ПК. Оставьте это окно открытым. PIN действует 5 минут.'
     Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.IPAddress -notmatch '^(127|169\.254)\.' } | Format-Table InterfaceAlias,IPAddress
     $Done=$false

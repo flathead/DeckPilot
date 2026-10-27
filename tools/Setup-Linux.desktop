@@ -1,9 +1,7 @@
 [Desktop Entry]
 Type=Application
-Name=DeckPilot Host Setup
-Name[ru]=Настройка DeckPilot на ПК
-Comment=Pair this Linux PC with your Steam Deck
-Comment[ru]=Подключить этот Linux-ПК к Steam Deck
+Name=Настройка DeckPilot на ПК
+Comment=Подключить этот Linux-ПК к Steam Deck
 Exec=sh -c "exec bash \\"\\$(dirname \\"\\$1\\")/setup-linux.sh\\"" sh %k
 Terminal=true
 Icon=network-workgroup

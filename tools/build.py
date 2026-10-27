@@ -2,6 +2,9 @@
 """Rebuild standalone installer and zero-dependency Decky frontend."""
 from pathlib import Path
 import shutil
+import json
+import re
+import ast
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -72,7 +75,30 @@ runuser -u deckpower -- env DECKY_POWER_MAC="$MAC" DECKY_POWER_SSH_PORT="$SSH_PO
     (tools/'setup-linux.sh').chmod(0o755)
     # Keep setup-arch.sh as a compatibility alias.
     shutil.copy2(tools/'setup-linux.sh', tools/'setup-arch.sh')
-    shutil.copyfile(ROOT/'src/index.js', ROOT/'dist/index.js')
+    catalogs = {language: json.loads((ROOT/'locales'/f'{language}.json').read_text())
+                for language in ('ru', 'en')}
+    if catalogs['ru'].keys() != catalogs['en'].keys():
+        raise ValueError('Locale catalogs must contain the same messages')
+    for key, russian in catalogs['ru'].items():
+        english = catalogs['en'][key]
+        if not russian or not english:
+            raise ValueError(f'Empty translation: {key}')
+        if sorted(re.findall(r'\{\w+\}|%s', russian)) != sorted(re.findall(r'\{\w+\}|%s', english)):
+            raise ValueError(f'Translation placeholders differ: {key}')
+    frontend = (ROOT/'src/index.js').read_text()
+    required = {ast.literal_eval(match.group(1)) for match in re.finditer(
+                r"\bt\(('(?:\\.|[^'\\])*')", frontend)}
+    required.update(node.value for node in ast.walk(ast.parse((ROOT/'main.py').read_text()))
+                    if isinstance(node, ast.Constant) and isinstance(node.value, str)
+                    and re.search('[А-Яа-яЁё]', node.value))
+    missing = required - catalogs['ru'].keys()
+    if missing:
+        raise ValueError(f'Missing locale messages: {sorted(missing)}')
+    i18n = (ROOT/'src/i18n.js').read_text().replace('__DECKPILOT_MESSAGES__',
+                json.dumps(catalogs, ensure_ascii=False, separators=(',', ':')))
+    source = frontend.replace(
+        "import {translate, translateError} from './i18n.js';", i18n)
+    (ROOT/'dist/index.js').write_text(source)
 
 
 if __name__ == '__main__':

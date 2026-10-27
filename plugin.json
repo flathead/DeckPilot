@@ -4,7 +4,12 @@
   "api_version": 1,
   "flags": [],
   "publish": {
-    "tags": ["utility", "network", "wol", "linux"],
-    "description": "Wake and shut down Linux/Windows PCs, pair interactively, and control an optional Steam Headless session."
+    "tags": [
+      "utility",
+      "network",
+      "wol",
+      "linux"
+    ],
+    "description": "Включение и выключение Linux/Windows-ПК, сопряжение и управление Steam Headless."
   }
 }
