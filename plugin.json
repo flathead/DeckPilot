@@ -1,11 +1,10 @@
 {
-  "name": "PC On Off",
-  "author": "proilyxa",
-  "flags": ["_root"],
+  "name": "DeckPilot",
+  "author": "flathead, based on proilyxa/deck-pc-on-off",
   "api_version": 1,
+  "flags": [],
   "publish": {
-    "tags": ["utility", "network", "wol"],
-    "description": "Wake on LAN plugin for Steam Deck. Wake up your PC or other devices from sleep using WOL magic packets.",
-    "image": "https://opengraph.githubassets.com/1/SteamDeckHomebrew/PluginLoader"
+    "tags": ["utility", "network", "wol", "linux"],
+    "description": "Wake and shut down Linux/Windows PCs, pair interactively, and control an optional Steam Headless session."
   }
 }

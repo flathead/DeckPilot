@@ -1,159 +1,148 @@
-# PC On/Off - Wake on LAN Plugin for Steam Deck
+# DeckPilot 0.2.0
 
-A Decky Loader plugin that allows you to wake up and shut down your PC directly from your Steam Deck.
+Включайте и выключайте домашний ПК с Steam Deck. Если на Linux-ПК установлен Steam Headless, добавьте кнопки запуска и остановки его игровой сессии.
 
-![PC On/Off Interface](assets/screenshot.png)
+Скачать 0.2.0: [плагин для Decky](https://github.com/flathead/DeckPilot/releases/download/v0.2.0/deckpilot-0.2.0.zip), [помощники для ПК](https://github.com/flathead/DeckPilot/releases/download/v0.2.0/deckpilot-host-0.2.0.zip), [исходники](https://github.com/flathead/DeckPilot/releases/download/v0.2.0/deckpilot-source-0.2.0.zip).
 
-## Features
+Форк [PC On/Off от proilyxa](https://github.com/proilyxa/deck-pc-on-off), лицензия BSD-3-Clause.
 
-- 💚 Send Wake-on-LAN packets to wake up devices
-- 🛑 Remote shutdown for devices (requires PC agent)
-- 🟢 Real-time host status indicators (requires PC agent)
-- 📝 Save multiple hosts with custom names
-- 🔧 Simple IP-based configuration (MAC address detected automatically)
-- 🎮 Clean, Steam Deck-optimized interface
-- ✏️ Edit and delete saved hosts
-- 🔄 Automatic MAC address refresh when device is online
-- 🔌 Configurable port for shutdown agent (default: 9876)
+## Скриншоты
 
-## Requirements
+| Питание ПК | Steam Headless |
+| --- | --- |
+| ![Питание ПК](assets/screenshots/home-ru.png) | ![Управление Steam Headless](assets/screenshots/headless-ru.png) |
 
-- Steam Deck with Decky Loader installed
-- Target device(s) must support Wake-on-LAN and have it enabled in BIOS/UEFI
-- Network connectivity between Steam Deck and target device
+Снимки тестового интерфейса с компонентами-заменителями Decky.
 
-## Installation
+## Установка
 
-### Manual Installation
+1. На Deck установите `deckpilot-0.2.0.zip` через установку ZIP в настройках разработчика Decky Loader. Откройте DeckPilot.
+2. На ПК распакуйте `deckpilot-host-0.2.0.zip`.
+3. Запустите мастер на ПК и пройдите четыре шага в DeckPilot.
 
-**Option 1: Install via Decky Loader (Recommended)**
-1. Download the latest `.zip` file from the [releases page](https://github.com/proilyxa/deck-pc-on-off/releases)
-2. Open Decky Loader on your Steam Deck (... button → Decky icon)
-3. Go to Settings (gear icon) → Developer → "Install Plugin from ZIP"
-4. Select the downloaded `.zip` file
-5. The plugin will be installed and ready to use
+### Linux-ПК
 
-**Option 2: Manual File Installation**
-1. Download the latest release from the [releases page](https://github.com/proilyxa/deck-pc-on-off/releases)
-2. Extract the contents to `~/homebrew/plugins/deck-pc-on-off/`
-3. Restart Decky Loader or reload plugins
+Откройте `Setup-Linux.desktop`. Если файловый менеджер попросит разрешить запуск, разрешите. Откроется терминал с мастером. Запасной способ из папки комплекта:
 
-## Usage
-
-1. Open the Quick Access menu on your Steam Deck (... button)
-2. Navigate to the PC On/Off plugin
-3. Click "Add Host" to add a new device
-4. Enter the following information:
-   - **Name**: A friendly name for your device (e.g., "Gaming PC")
-   - **IP Address or Hostname**: The IP address or hostname of your device (e.g., `192.168.1.100` or `gaming-pc.local`)
-   - **Port**: The port for the shutdown agent (default: 9876, only needed if using shutdown feature)
-5. Click the power button (⏻) to send a WOL packet and wake up your device
-6. Click the stop button (⏹) to send a shutdown command (requires PC agent to be running)
-
-**Note:** The plugin automatically detects the MAC address from the IP using ARP. For this to work:
-- The device must be online when you add it (or have been recently online)
-- Both devices must be on the same network
-- The MAC address is cached after the first successful detection
-
-## Enabling Wake-on-LAN on Your PC
-
-### In BIOS/UEFI
-1. Enter BIOS/UEFI settings (usually by pressing Del, F2, or F12 during boot)
-2. Look for "Wake on LAN", "WOL", or "Power On by PCI-E" settings
-3. Enable the option
-4. Save and exit
-
-### In Windows
-1. Open Device Manager
-2. Find your network adapter
-3. Right-click → Properties → Power Management
-4. Enable "Allow this device to wake the computer"
-5. Advanced tab → Enable "Wake on Magic Packet"
-6. **Disable Fast Startup (Windows 10/11):**
-   - Open Control Panel → Hardware and Sound → Power Options
-   - Click "Choose what the power buttons do"
-   - Click "Change settings that are currently unavailable"
-   - **Uncheck** "Turn on fast startup (recommended)"
-   - Click "Save changes"
-   
-   > **Why?** Fast Startup prevents Wake-on-LAN from working properly because it puts the PC into a hybrid shutdown state instead of a full shutdown.
-
-### In Linux
 ```bash
-sudo ethtool -s eth0 wol g
-```
-Replace `eth0` with your network interface name.
-
-To make it persistent, add to `/etc/network/interfaces`:
-```
-post-up ethtool -s eth0 wol g
+bash setup-linux.sh
 ```
 
-## PC Shutdown Agent (Optional)
+Мастер запросит sudo, установит пакеты и предложит подключить Steam Headless. При наличии UFW или firewalld он предложит разрешить связь с Deck для подсетей проводных и Wi-Fi-интерфейсов. Затем он покажет PIN из восьми цифр.
 
-To use the remote shutdown feature and real-time status indicators, you need to run an agent on your PC that listens for shutdown commands.
+Автоустановка пакетов поддерживает Arch/CachyOS, Debian/Ubuntu и Fedora с systemd через pacman, apt-get и dnf. Другим дистрибутивам нужен отдельный адаптер. Скрипт на этих дистрибутивах не проходил аппаратную проверку.
 
-### Download Ready-to-Use Agent
+### Windows-ПК
 
-A pre-built Windows agent is available here:  
-**https://github.com/proilyxa/pc-agent**
+Запустите `Setup-Windows.cmd` и подтвердите запрос администратора. Нужны 64-битная Windows 10/11 с доступным компонентом OpenSSH Server и Windows PowerShell 5.1. Windows может скачать компонент через Windows Update. Если она запросит перезагрузку, перезагрузите ПК и повторите запуск.
 
-The agent:
-- Listens on port 9876 (configurable)
-- Responds to `/ping` for status checks
-- Responds to `/shutdown` to initiate PC shutdown
-- Can be set up as a Windows service
+В мастере выберите Ethernet-адаптер для Wake-on-LAN. Подключите ПК к домашней сети с профилем Windows «Частная»: правила DeckPilot разрешают связь из LocalSubnet в этом профиле. PIN появится в окне мастера.
 
-**Status Indicator (requires agent):**
-- 🟢 Green dot: PC agent is running and responding
-- 🔴 Red dot: PC agent is not responding or offline
+Помощник Windows управляет питанием ПК. Интеграция Steam Headless и Ambxst в этом выпуске работает на Linux; Docker Desktop и WSL не поддерживаются.
 
-### Firewall Configuration
+### На Steam Deck
 
-Make sure to allow incoming connections on the agent port (default: 9876):
+Выберите систему ПК. Мастер объяснит Steam Headless и предложит подключить его, если он установлен. Ответ «Нет» оставит управление питанием.
 
-**Windows Firewall:**
-```powershell
-New-NetFirewallRule -DisplayName "PC Shutdown Agent" -Direction Inbound -LocalPort 9876 -Protocol TCP -Action Allow
+Нажмите поиск ПК. Если он найдёт несколько компьютеров, выберите нужный. При необходимости введите локальный IP.
+
+Введите PIN с ПК и нажмите «Подключить». На ПК появится **код сверки**, например `5AC1-80D4-F9C2`. Сравните его с кодом на Deck. Если они совпадают, введите `YES` на ПК в течение минуты. DeckPilot проверит SSH и сохранит компьютер. Ключи создаст мастер; копировать их не нужно.
+
+Если коды различаются, отклоните запрос на ПК. Первую настройку проводите в домашней сети, которой доверяете.
+
+## Управление
+
+«Включить ПК» отправляет Wake-on-LAN. Дождитесь появления связи с ПК. «Выключить ПК» просит подтверждение и отправляет команду завершения работы по SSH. Перед этим сохраните игру и документы.
+
+Статус связи проверяет порт SSH, а кнопка проверки в настройках проверяет вход с сохранёнными ключами. Открытый порт сам по себе не подтверждает работоспособность помощника.
+
+Для WoL нужна поддержка сетевой карты и BIOS/UEFI. Надёжнее использовать Ethernet. Мастер Linux включает magic packet и сохраняет настройку в NetworkManager и службе `deckpilot-wol.service`. В Windows он пытается включить Wake on Magic Packet для выбранного адаптера. При проблемах проверьте питание Ethernet после выключения, ErP/Deep Sleep и быстрый запуск Windows. Мастер не меняет BIOS или быстрый запуск Windows.
+
+## Steam Headless
+
+Со Steam Headless вы играете на Deck через Steam Remote Play / Steam Link, а основной рабочий стол ПК остаётся свободным. Для этого на Linux-ПК нужна отдельная сессия Steam в контейнере. DeckPilot управляет установленной сессией; сам Steam Headless он не устанавливает.
+
+Если вы отказались от Headless, на главном экране не будет его кнопок и статусов. Позже установите и настройте Steam Headless, повторите мастер на Linux-ПК с выбором интеграции, затем откройте **Настройки ПК → Добавить Steam Headless… → Проверить и добавить**. Сопряжение Deck повторять не нужно.
+
+Доступны два способа подключения:
+
+| Интеграция | Возможности |
+| --- | --- |
+| Мод Ambxst `local.steam-headless-control` | Статус сессии, запуск, штатная остановка игры и Steam, PIN Steam Link |
+| Контейнер в обычном Docker | Статус контейнера, запуск и SIGTERM без принудительного SIGKILL; готовность Steam проверяйте на Deck |
+
+Для Ambxst мастер ищет установленный backend пакета мода, затем `~/.local/bin/steam-headless`. Он проверяет `config-check`. Требуется JSON-протокол контроллера с командами `status/start/stop`; для PIN нужны `pair` и `pair-status`. DeckPilot вызывает его от владельца установки и сохраняет его проверки библиотеки, блокировки и порядок остановки. Файлы мода и профиль установки он не меняет.
+
+Для обычного Docker выберите существующий контейнер по имени. Мастер использует `/var/run/docker.sock`. Он не устанавливает Docker, не создаёт контейнер, не выбирает GPU и не настраивает авторизацию Steam. При остановке Docker получит `--time=-1`: он будет ждать завершения контейнера без SIGKILL. При долгом ожидании DeckPilot предложит проверить статус на ПК.
+
+Запуск Headless и пробуждение ПК выполняются разными кнопками. Остановка Headless оставляет ПК включённым. Возможность игры на разных устройствах зависит от аккаунтов Steam и доступа к играм; для одновременных игровых сессий могут потребоваться разные аккаунты.
+
+Для PIN Steam Link откройте Steam Link на Deck, выберите Headless-ПК и введите показанные четыре цифры в блоке DeckPilot. Контроллер Ambxst передаст PIN в Steam внутри Headless. Этот PIN отличается от восьмизначного PIN настройки DeckPilot.
+
+## Обновление с PC On/Off
+
+DeckPilot устанавливается под новым именем. При первом запуске выберите «Перенести ПК из PC On/Off», пока список пуст. Импорт читает соседний каталог настроек `PC On Off/hosts.json`. При нестандартном расположении настроек пройдите подключение ПК.
+
+Мастер использует прежний отдельный ключ `~/.ssh/decky-power_ed25519`; существующие ключи на ПК сохраняются. Старый помощник поддерживает питание. Для Headless повторите мастер на ПК и включите интеграцию в настройках DeckPilot. После переноса можно удалить старый плагин из Decky.
+
+## Доступ и системные изменения
+
+Помощник Linux создаёт пользователя `deckpower` с домашним каталогом `/var/lib/decky-power`, ограниченный SSH-dispatcher, правила sshd и sudoers. Учётная запись принимает команды проверки, выключения и подключённой интеграции Headless. Shell, PTY и перенаправление TCP ей недоступны. При SELinux мастер задаёт контексты домашнего каталога и SSH-файлов.
+
+Помощник Windows создаёт **неадминистративную** учётную запись `deckpower` со случайным паролем. Он запрещает ей вход с паролем по SSH, рабочий стол и RDP, выдаёт право локального выключения и задаёт `ForceCommand` для трёх команд: проверка, возможности, выключение. Файлы помощника и ключи в `%ProgramData%\DeckPilot` доступны ей для чтения. Администраторы и SYSTEM могут их менять. Мастер сохраняет копию `sshd_config` перед правкой.
+
+Временный сервер сопряжения работает до пяти минут на TCP 47833. Он принимает до восьми попыток PIN и требует подтверждения на ПК. После настройки сервер завершает работу; Windows удаляет его правило firewall, UFW удаляет добавленные временные правила, firewalld завершает действие правила по таймеру. Правило SSH остаётся для управления ПК.
+
+При первом сопряжении PIN и публичный ключ передаются по HTTP в локальной сети. Короткий код сверки зависит от ключа ПК и ключа Deck; сравнение кодов на обоих устройствах и подтверждение на ПК защищают от подмены при сопряжении. Приватный ключ остаётся на Deck. Последующие команды используют SSH с проверкой сохранённого ключа ПК. Плагин принимает частные IPv4-адреса RFC1918; поиск ограничен локальной `/24`.
+
+Чтобы отозвать доступ Deck, удалите её ключ из `/var/lib/decky-power/.ssh/authorized_keys` на Linux или `%ProgramData%\DeckPilot\authorized_keys` на Windows. Отключение или удаление плагина на Deck не удаляет установленного помощника на ПК.
+
+## Диагностика
+
+| Ситуация | Действие |
+| --- | --- |
+| Поиск не нашёл ПК | Оставьте мастер на ПК открытым; проверьте одну локальную сеть и изоляцию Wi-Fi; попробуйте IP |
+| PIN истёк или запрос отклонён | Запустите мастер на ПК ещё раз |
+| Ошибка SSH после настройки | Нажмите проверку подключения в настройках; проверьте службу ssh/sshd и правила LAN firewall |
+| Для IP сохранён другой ключ SSH | Убедитесь, что это нужный ПК; удалите устаревшую запись для этого адреса из known_hosts на Deck и пройдите сопряжение |
+| Headless не появился | Повторите мастер на Linux-ПК с выбором интеграции, затем добавьте управление в настройках DeckPilot |
+| Ambxst отклонил остановку | Закройте или сохраните игру в сессии Headless; проверьте контроллер на ПК |
+| Windows Update не ставит OpenSSH | Установите компонент OpenSSH Server через дополнительные компоненты Windows, затем повторите мастер |
+
+## Проверки и ограничения
+
+Проверены 18 тестов backend: адреса и команды, сохранение настроек, импорт, права ключей, изменение ключа ПК, отказ от неверного PIN, HTTP-сопряжение с подтверждением. Тесты интерфейса проверяют отказ от Headless, его добавление позже, ошибку подключения и Windows-сценарий.
+
+Windows-скрипт прошёл разбор PowerShell. Код LSA компилируется. HTTP-протокол помощника прошёл проверку под PowerShell на Linux с временными файлами и заглушками системных команд. Это не проверка установки, ACL или выключения настоящей Windows.
+
+Интерфейс просмотрен на стенде с React и заменителями компонентов Decky при ширине 320 px. Проверка не подтверждает нативную навигацию геймпадом.
+
+На физической Steam Deck и Windows-ПК этот выпуск не запускался. Аппаратные WoL, SSH и остановку игры нужно проверить на целевых устройствах.
+
+## Исходники
+
+```bash
+python3 tools/build.py
+python3 -m unittest discover -s tests -v
+node tests/frontend.mjs
+bash -n tools/setup-linux.sh
+node --check dist/index.js
 ```
 
-## Troubleshooting
+Для теста протокола Windows нужен PowerShell 7 на машине разработчика:
 
-**Cannot add host / "Could not find MAC address" error:**
-- Make sure the device is currently online and reachable
-- Verify you can ping the device from Steam Deck: `ping [ip-address]`
-- Both devices must be on the same local network
-- Check that the IP address is correct
+```bash
+DECKPILOT_PWSH=/path/to/pwsh python3 tests/windows-protocol.py
+```
 
-**Device doesn't wake up:**
-- Ensure Wake-on-LAN is enabled in BIOS and OS
-- Make sure the device is connected via Ethernet (WiFi WOL is unreliable)
-- Verify both devices are on the same network or VLAN
-- Try waking the device again (the plugin refreshes MAC address on each wake attempt)
-- Some routers/switches may block WOL packets - check router settings
+`build.py` копирует frontend и собирает автономный Linux-установщик из шаблона и Python-помощников. Зависимости npm для сборки не нужны. Запускайте сетевые тесты с доступом к loopback-сокетам.
 
-**Shutdown doesn't work:**
-- Verify the shutdown agent is running on your PC
-- Check that the port is correct (default: 9876)
-- Ensure the firewall allows incoming connections on the agent port
-- Test the agent manually: `curl http://[pc-ip]:[port]/ping` (should return "OK")
-- The agent must be running with administrator/root privileges
+Архивы для установки и исходников:
 
-**Status indicator always shows red:**
-- Status indicators require the PC agent to be installed and running
-- Make sure the shutdown agent is running on your PC
-- Verify the port number is correct in plugin settings
-- Check firewall settings - the agent port must be accessible
-- The status updates every 5 seconds while the plugin is open
-- The agent must respond to `/ping` requests
-- Without the agent, Wake-on-LAN will still work, but status will show red
+```bash
+python3 tools/package.py --output ../releases
+```
 
-**Plugin doesn't appear:**
-- Restart Decky Loader
-- Check the Decky logs for errors
-- Ensure the plugin folder is in the correct location
+Скрипт исключает Git и кэш Python из архива исходников. Чтобы скопировать комплект ещё в один каталог, добавьте `--copy-to /path/to/downloads`.
 
-## Acknowledgments
-
-- Built using the [Decky Plugin Template](https://github.com/SteamDeckHomebrew/decky-plugin-template)
-- Thanks to the [Decky Loader](https://github.com/SteamDeckHomebrew/decky-loader) team
+Документация OpenSSH для Windows: [установка](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse) и [конфигурация](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh-server-configuration).
